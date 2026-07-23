@@ -9,18 +9,18 @@ RUN apt-get update && apt-get install -y \
 # Pin al tag corrispondente a liboqs-python==0.14.1 per garantire compatibilità
 # del wire format (ML-KEM/Kyber ha già cambiato formato una volta tra versioni).
 # Aggiornare ENTRAMBI il tag qui e la versione in requirements.txt insieme.
-RUN git clone --depth 1 --branch 0.14.0 \
-        https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs \
-    && cmake -S /tmp/liboqs -B /tmp/liboqs/build \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DOQS_BUILD_ONLY_LIB=ON \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -G Ninja \
-    && cmake --build /tmp/liboqs/build --parallel 4 \
-    && cmake --install /tmp/liboqs/build \
-    && rm -rf /tmp/liboqs \
-    && ldconfig
+# RUN git clone --depth 1 --branch 0.14.0 \
+#        https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs \
+#    && cmake -S /tmp/liboqs -B /tmp/liboqs/build \
+#        -DBUILD_SHARED_LIBS=ON \
+#        -DCMAKE_BUILD_TYPE=Release \
+#        -DOQS_BUILD_ONLY_LIB=ON \
+#        -DCMAKE_INSTALL_PREFIX=/usr/local \
+#        -G Ninja \
+#    && cmake --build /tmp/liboqs/build --parallel 4 \
+#    && cmake --install /tmp/liboqs/build \
+#    && rm -rf /tmp/liboqs \
+#    && ldconfig
 
 WORKDIR /app
 
