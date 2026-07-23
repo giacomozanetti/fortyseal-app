@@ -36,4 +36,4 @@ RUN chmod +x start.sh
 
 EXPOSE 10000
 
-CMD ["gunicorn", "Cripto.wsgi:application", "--bind", "0.0.0.0:10000", "--workers", "2", "--timeout", "120"]
+CMD [CMD ["python", "manage.py", "runserver", "0.0.0.0:10000"]]
