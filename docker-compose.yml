@@ -1,0 +1,184 @@
+# =============================================================================
+# docker-compose.yml — stack completo FortySeal per Docker
+#
+# Servizi:
+#   db    → PostgreSQL 16 (persistente)
+#   redis → Redis 7 (channels / cache / broker Celery)
+#   web   → l'app Django (build dal Dockerfile, gunicorn su :10000)
+#           esegue il bootstrap completo all'avvio (migrazioni + setup) via start.sh
+#   celeryworker → worker Celery (job asincroni: integrità, webhook, ecc.)
+#   celerybeat   → scheduler Celery (reset cap mensile, integrità notturna, ...)
+#   telegram-bot → opzionale, avviato solo con:  docker compose --profile bot up
+#
+# Avvio:
+#   docker compose up --build
+#   → app su http://localhost:8000
+#
+# NOTE:
+#   - I segreti vengono iniettati dal tuo .env reale: ./Cripto/.env (accanto a settings.py).
+#   - Le credenziali del Postgres interno (POSTGRES_*) e quelle usate dall'app (DB_*)
+#     derivano dalla stessa espressione ${DB_*:-default}, quindi combaciano sempre.
+#   - Il path DATABASE_URL di settings.py impone ssl_require=True (adatto a Render,
+#     NON a un Postgres locale): qui usiamo quindi le variabili DB_* (sslmode=prefer)
+#     e azzeriamo DATABASE_URL dentro al container.
+#   - Per il test in locale via http imposta DEBUG=True nel .env, altrimenti
+#     SECURE_SSL_REDIRECT=True reindirizza tutto su https (serve un proxy TLS davanti).
+# =============================================================================
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-fortyseal}
+      POSTGRES_USER: ${DB_USER:-fortyseal}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme-in-env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fortyseal} -d ${DB_NAME:-fortyseal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fortyseal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - fortyseal
+
+  web:
+    build: .
+    restart: unless-stopped
+    # NIENTE env_file: Compose interpola i '$' nei valori e corromperebbe i segreti
+    # (es. SECRET_KEY contiene un '$'). Montiamo invece il .env (vedi volumes) e
+    # lasciamo che lo legga load_dotenv() in settings.py, come avviene in locale.
+    environment:
+      # Solo override di runtime (valori nostri, niente '$'): forzano il path DB_*
+      # di settings.py verso il Postgres del compose. Hanno precedenza sul .env
+      # perché load_dotenv usa override=False.
+      USE_SQLITE: "False"
+      DATABASE_URL: ""
+      DB_NAME: ${DB_NAME:-fortyseal}
+      DB_USER: ${DB_USER:-fortyseal}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme-in-env}
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:10000"
+    volumes:
+      # Montiamo la DIRECTORY del package di settings (che contiene il .env) invece del
+      # singolo file: i bind-mount di file singolo su Docker Desktop/Windows si rompono
+      # quando il file viene modificato/risalvato (cambio di inode) -> il container vede
+      # un file vuoto e SECRET_KEY sparisce. Il mount di directory è stabile.
+      # load_dotenv() in settings.py legge /app/Cripto/.env (niente interpolazione di Compose).
+      - ./Cripto:/app/Cripto:ro              # settings package + .env (codice identico all'immagine)
+      - media:/data                          # MEDIA_ROOT = /data/media
+      - backups:/app/blockchain_backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - fortyseal
+
+  # Worker Celery: esegue i task asincroni (verifiche integrità, consegna webhook,
+  # ecc.). NON esegue migrazioni/collectstatic: lo fa il servizio web.
+  celeryworker:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "Cripto", "worker", "-l", "info", "--concurrency=2"]
+    environment:
+      USE_SQLITE: "False"
+      DATABASE_URL: ""
+      DB_NAME: ${DB_NAME:-fortyseal}
+      DB_USER: ${DB_USER:-fortyseal}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme-in-env}
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./Cripto:/app/Cripto:ro
+      - media:/data
+      - backups:/app/blockchain_backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - fortyseal
+
+  # Scheduler Celery (beat): pianifica i job periodici definiti in
+  # settings.CELERY_BEAT_SCHEDULE (reset cap mensile, integrità notturna,
+  # API key in scadenza, purge audit).
+  celerybeat:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "Cripto", "beat", "-l", "info"]
+    environment:
+      USE_SQLITE: "False"
+      DATABASE_URL: ""
+      DB_NAME: ${DB_NAME:-fortyseal}
+      DB_USER: ${DB_USER:-fortyseal}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme-in-env}
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./Cripto:/app/Cripto:ro
+      - media:/data
+      - backups:/app/blockchain_backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+    networks:
+      - fortyseal
+
+  # Servizio opzionale: bot Telegram (processo separato dal web).
+  # Avvialo solo se ti serve:  docker compose --profile bot up --build
+  telegram-bot:
+    build: .
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_telegram_bot"]
+    environment:
+      USE_SQLITE: "False"
+      DATABASE_URL: ""
+      DB_NAME: ${DB_NAME:-fortyseal}
+      DB_USER: ${DB_USER:-fortyseal}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme-in-env}
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./Cripto:/app/Cripto:ro
+      - media:/data
+      - backups:/app/blockchain_backups
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["bot"]
+    networks:
+      - fortyseal
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  backups:
+
+networks:
+  fortyseal:
+    driver: bridge

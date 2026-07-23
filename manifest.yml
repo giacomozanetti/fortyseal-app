@@ -1,0 +1,9 @@
+﻿applications:
+  - name: fortyseal-dev
+    memory: 256M
+    instances: 1
+    buildpack: python_buildpack
+    routes:
+      - route: fortyseal-dev-giacomo.eu-de.mybluemix.net
+    env:
+      DEBUG: false

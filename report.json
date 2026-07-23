@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-07-04T07:47:08.897861+00:00",
+  "run_id": "5a9834fc3899",
+  "platform": "Windows 10 · Python 3.11.5",
+  "config": {
+    "host": "http://localhost:8000",
+    "slug": "fortyseal3",
+    "count": 200,
+    "concurrency": 8,
+    "sizes": [
+      "64.00 KB"
+    ],
+    "signed": true,
+    "sig_algo": "",
+    "warmup": 0,
+    "cleanup": true
+  },
+  "phases": [
+    {
+      "payload_size_bytes": 65536,
+      "payload_size_human": "64.00 KB",
+      "requests_total": 200,
+      "requests_ok": 177,
+      "requests_failed": 23,
+      "deleted_cleanup": 177,
+      "status_breakdown": {
+        "200": 177,
+        "429": 23
+      },
+      "latency_ms": {
+        "count": 177,
+        "min": 1755.8574001304805,
+        "max": 11443.382599856704,
+        "mean": 3940.647102267571,
+        "median": 3629.799999995157,
+        "stddev": 1584.6316412012848,
+        "p90": 5496.733740018681,
+        "p95": 6316.276940051462,
+        "p99": 10177.31618002989
+      },
+      "throughput": {
+        "wall_time_sec": 88.33610389987007,
+        "requests_per_sec": 2.0037107387103172,
+        "plaintext_MB_per_sec": 0.13131518697211936,
+        "encrypted_MB_per_sec": 0.14955095840512195
+      },
+      "overhead": {
+        "ratio_mean": 1.1388702392578125,
+        "ratio_min": 1.1388702392578125,
+        "ratio_max": 1.1388702392578125,
+        "abs_bytes_mean": 9101.0,
+        "abs_bytes_min": 9101,
+        "abs_bytes_max": 9101,
+        "total_plaintext": 11599872,
+        "total_encrypted": 13210749
+      },
+      "errors": {
+        "429: Too Many Requests": 23
+      }
+    }
+  ],
+  "resources": {
+    "available": true,
+    "samples": 858,
+    "interval_sec": 0.25,
+    "logical_cpus": 12,
+    "system": {
+      "cpu_pct_avg": 14.493240093240095,
+      "cpu_pct_peak": 80.2,
+      "mem_pct_avg": 62.149533799533806,
+      "mem_pct_peak": 63.2,
+      "mem_used_peak": 10733035520
+    },
+    "client": {
+      "cpu_pct_avg": 1.2710955710955714,
+      "cpu_pct_peak": 74.6,
+      "rss_avg": 36411301.296037294,
+      "rss_peak": 36827136
+    },
+    "server": {
+      "match": "gunicorn",
+      "cpu_pct_avg": 1.1841491841491842,
+      "cpu_pct_peak": 12.5,
+      "rss_avg": 39905041.30536131,
+      "rss_peak": 40316928,
+      "note": "CPU% aggregata sui processi che matchano; può superare 100% (multi-core)."
+    }
+  }
+}

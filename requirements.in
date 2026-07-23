@@ -1,0 +1,64 @@
+# ============================================================
+# requirements.in — dipendenze dirette del progetto FortySeal
+#
+# Per aggiornare requirements.txt:
+#   pip-compile --generate-hashes --allow-unsafe -o requirements.txt requirements.in
+#
+# Per produzione usa requirements.txt (pin esatti).
+# I tool di test/QA sono separati in requirements-dev.in.
+# ============================================================
+
+# --- Core Django ---
+Django>=4.2,<5.3
+dj-database-url>=2.0.0
+django-encrypted-model-fields>=0.6.5
+django-csp>=4.0           # Content Security Policy + nonce (XSS mitigation)
+python-json-logger>=4.1.0 # Structured JSON logging — GDPR Art. 5 / NIS2
+
+# --- Cryptography & PQC ---
+cryptography>=41.0.0
+liboqs-python==0.14.1     # Richiede installazione manuale lib C liboqs
+
+# --- Database ---
+psycopg2-binary>=2.9.0
+
+# --- Static files & deployment ---
+whitenoise>=6.5.0
+gunicorn>=21.0.0
+
+# --- Real-time ---
+channels>=4.0.0
+redis>=5.0.0
+
+# --- Auth / 2FA ---
+pyotp>=2.8.0
+qrcode>=7.4.2
+python-dotenv
+
+# --- Media & files ---
+Pillow>=10.0.0
+python-magic
+reportlab
+
+# --- API & network ---
+requests>=2.31.0
+python-telegram-bot==21.9
+
+# --- Async tasks ---
+celery>=5.3.0
+
+# --- Resilience & sicurezza ---
+tenacity>=9.0.0
+django-axes>=8.3.0        # R-007 NIS2 Art. 21(2)(i) — brute-force lockout per username
+django-auditlog>=3.0.0    # R-012 ISO 27001 A.8.15 — audit trail modifiche modelli admin
+
+# --- Utilities ---
+python-dateutil
+psutil
+numpy
+faker
+agora-token-builder
+sentry-sdk[django]
+
+# --- Storage Gateway ---
+boto3                      # S3-compatible client (AWS, MinIO, Cubbit, Wasabi, Backblaze)

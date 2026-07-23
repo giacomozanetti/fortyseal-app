@@ -1,0 +1,8 @@
+# Forza i fine-riga LF per gli script shell, anche su Windows.
+# Evita l'errore "env: 'bash\r': No such file or directory" nei container Linux.
+*.sh text eol=lf
+start.sh text eol=lf
+build.sh text eol=lf
+
+# Script/entrypoint comuni mantenuti a LF
+*.bash text eol=lf
